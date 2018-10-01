@@ -23,12 +23,37 @@
          width: 800px;
          height: 500px;
        }
+
+       .info {
+         padding: 6px 8px;
+         font: 14px/16px Arial, Helvetica, sans-serif;
+         background: white;
+         background: rgba(255, 255, 255, 0.8);
+         box-shadow: 0 0 15px rgba(0, 0, 0, 0.2);
+         border-radius: 5px;
+       }
+
+       .info h4 {
+         margin: 0 0 5px;
+         color: #777;
+       }
+
+       .legend {
+          line-height: 18px;
+          color: #555;
+      }
+      .legend i {
+          width: 18px;
+          height: 18px;
+          float: left;
+          margin-right: 8px;
+          opacity: 0.7;
+      }
      </style>
 
     <title>Hello, world!</title>
   </head>
   <body>
-    <h1>Hello, world!</h1>
 
     <div class="container">
         <div id="map"></div>
@@ -46,12 +71,113 @@
 
         var map = L.map('map').setView([37.8, -96], 4);
 
+        var geojson;
+
         L.tileLayer('https://api.tiles.mapbox.com/v4/{id}/{z}/{x}/{y}.png?access_token=' + mapboxAccessToken, {
             id: 'mapbox.light',
             attribution: "..."
         }).addTo(map);
 
-        L.geoJson(provincesData).addTo(map);
+        var info = L.control();
+
+        info.onAdd = function(map) {
+          this._div = L.DomUtil.create('div', 'info');
+          this.update();
+          return this._div;
+        };
+
+        info.update = function(props) {
+          this._div.innerHTML = "<h4>Brokers jobs (NOC 1113)</h4>" + ( props ? 
+          `<b>${props.PRENAME}</b><br>${props.jobs} jobs`
+          : 
+          "Hover over a province for further details");
+        };
+
+        info.addTo(map);
+
+        function getColor(jobCount) {
+          return jobCount > 5000 ? "#800026" :
+                  jobCount > 2000 ? "#BD0026" :
+                  jobCount > 1000 ? "#E31A1C" :
+                  jobCount > 500 ? "#FC4E2A" :
+                  jobCount > 250 ? "#FD8D3C" :
+                  jobCount > 100 ? "#FEB24C" :
+                  jobCount > 50 ? "#FED976" :
+                  jobCount > 0 ? "#FFEDA0" :
+                  "#D2D3BA";
+        }
+
+        function getStyle(feature) {
+          return {
+            fillColor: getColor(feature.properties.jobs),
+            weight: 2,
+            opacity: 1,
+            color: 'white',
+            dashArray: '3',
+            fillOpacity: 0.7
+          };
+        }
+
+        function highlightFeature(event) {
+          var layer = event.target;
+
+          layer.setStyle({
+            weight: 5,
+            color: "#666",
+            dashArray: "",
+            fillOpacity: 0.7
+          });
+
+          if (!L.Browser.ie && !L.Browser.opera && !L.Browser.edge) {
+            layer.bringToFront();
+          }
+
+          info.update(layer.feature.properties);
+        }
+
+        function resetHighlight(event) {
+          geojson.resetStyle(event.target);
+
+          info.update();
+        }
+
+        function zoomToFeature(event) {
+          map.fitBounds(event.target.getBounds());
+        }
+
+        function onEachFeature(feature, layer) {
+          layer.on({
+            mouseover: highlightFeature,
+            mouseout: resetHighlight,
+            click: zoomToFeature
+          });
+        }
+
+
+        geojson = L.geoJson(provincesData, 
+          {style: getStyle,
+          onEachFeature: onEachFeature
+          }).addTo(map);
+
+        var legend = L.control({position: 'bottomright'});
+
+        legend.onAdd = function (map) {
+        
+            var div = L.DomUtil.create('div', 'info legend'),
+                grades = [0, 1, 50, 100, 250, 500, 1000, 2500, 5000],
+                labels = [];
+        
+            // loop through our density intervals and generate a label with a colored square for each interval
+            for (var i = 0; i < grades.length; i++) {
+                div.innerHTML +=
+                    '<i style="background:' + getColor(grades[i] > 0 ? grades[i] + 1 : grades[i]) + '"></i> ' +
+                    grades[i] + (grades[i] == 0 ? '<br>' : grades[i + 1] ? '&ndash;' + grades[i + 1] + '<br>' : '+');
+            }
+        
+            return div;
+        };
+        
+        legend.addTo(map);
     </script>
   </body>
 </html>
