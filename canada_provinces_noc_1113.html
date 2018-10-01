@@ -20,13 +20,13 @@
 
      <style>
        #map {
-         width: 800px;
-         height: 500px;
+         width: 100vw;
+         height: 100vh;
        }
 
        .info {
          padding: 6px 8px;
-         font: 14px/16px Arial, Helvetica, sans-serif;
+         font: 36px/40px Arial, Helvetica, sans-serif;
          background: white;
          background: rgba(255, 255, 255, 0.8);
          box-shadow: 0 0 15px rgba(0, 0, 0, 0.2);
@@ -39,25 +39,23 @@
        }
 
        .legend {
-          line-height: 18px;
+          line-height: 24px;
           color: #555;
+          font: 24px/28px Arial, Helvetica, sans-serif;
       }
       .legend i {
-          width: 18px;
-          height: 18px;
+          width: 24px;
+          height: 24px;
           float: left;
           margin-right: 8px;
           opacity: 0.7;
       }
      </style>
 
-    <title>Hello, world!</title>
+    <title>Broker (NOC 1113) </title>
   </head>
   <body>
-
-    <div class="container">
         <div id="map"></div>
-    </div>
 
     <!-- Optional JavaScript -->
     <!-- jQuery first, then Popper.js, then Bootstrap JS -->
@@ -69,7 +67,7 @@
     <script type="text/javascript">
         var mapboxAccessToken = "pk.eyJ1IjoibWFyY29sdXNzZXR0aSIsImEiOiJjam1wbzhyMWkxMjFwM2txY2s1Y21yZTQxIn0.ZxVbYhOsbuK-Izbbqxx6Pg";
 
-        var map = L.map('map').setView([37.8, -96], 4);
+        var map = L.map('map').setView([59.416761, -92.102570], 4);
 
         var geojson;
 
@@ -88,9 +86,9 @@
 
         info.update = function(props) {
           this._div.innerHTML = "<h4>Brokers jobs (NOC 1113)</h4>" + ( props ? 
-          `<b>${props.PRENAME}</b><br>${props.jobs} jobs`
+          `<b>${props.city ? props.name : props.PRENAME}</b><br>${props.jobs} jobs`
           : 
-          "Hover over a province for further details");
+          "Hover over a province");
         };
 
         info.addTo(map);
@@ -108,6 +106,9 @@
         }
 
         function getStyle(feature) {
+          if (feature.properties.city) {
+            return getPointStyle(feature);
+          }
           return {
             fillColor: getColor(feature.properties.jobs),
             weight: 2,
@@ -115,6 +116,18 @@
             color: 'white',
             dashArray: '3',
             fillOpacity: 0.7
+          };
+        }
+
+        function getPointStyle(feature) {
+          return {
+            radius: feature.properties.jobs > 5000 ? 12 : feature.properties.jobs > 1000 ? 10 : feature.properties.jobs > 500 ? 8 : 6,
+            fillColor: getColor(feature.properties.jobs),
+            color: "#4F4F4F",
+            weight: 8,
+            opacity: 1,
+            dashArray: "",
+            fillOpacity: 0.8
           };
         }
 
@@ -128,9 +141,9 @@
             fillOpacity: 0.7
           });
 
-          if (!L.Browser.ie && !L.Browser.opera && !L.Browser.edge) {
+          /*if (!L.Browser.ie && !L.Browser.opera && !L.Browser.edge) {
             layer.bringToFront();
-          }
+          }*/
 
           info.update(layer.feature.properties);
         }
@@ -155,8 +168,12 @@
 
 
         geojson = L.geoJson(provincesData, 
-          {style: getStyle,
-          onEachFeature: onEachFeature
+          {
+            style: getStyle,
+            onEachFeature: onEachFeature,
+            pointToLayer: function (feature, latlng) {
+              return L.circleMarker(latlng, getPointStyle(feature));
+            },
           }).addTo(map);
 
         var legend = L.control({position: 'bottomright'});
